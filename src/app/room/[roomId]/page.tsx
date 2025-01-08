@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 export default function RoomPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
-  const { room, connection, error, configureRoom, startMatching, addMoviesToRoom } = useSignalR();
+  const { room, connection, error, configureRoom, startMatching, addMoviesToRoom, setLoadingMovies } = useSignalR();
   const router = useRouter();
 
   // Escuta mudanças no status da sala
@@ -22,7 +22,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [settings, setSettings] = useState<RoomSettings>({
     categories: [],
-    roundDurationInMinutes: 3,
+    roundDurationInSeconds: 30,
     maxParticipants: 10
   });
 
@@ -32,6 +32,8 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
     if (!room || !isHost) return;
 
     try {
+      setLoadingMovies();
+
       const movies: Movie[] = [];
       
       // Para cada categoria selecionada
@@ -59,7 +61,7 @@ export default function RoomPage({ params }: { params: Promise<{ roomId: string 
   }
 
   // Loading de filmes
-  if (room.status === RoomStatus.LoadingMovies) {
+  if (room.status === RoomStatus.LoadingMovies || room.status === RoomStatus.InProgress) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 
                     bg-gradient-to-b from-gray-50 to-gray-100 
@@ -188,7 +190,11 @@ function HostView({
 }) {
   const [copied, setCopied] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [localSettings, setLocalSettings] = useState(settings);
+  const [localSettings, setLocalSettings] = useState<RoomSettings>({
+    categories: settings.categories,
+    roundDurationInSeconds: settings.roundDurationInSeconds || 60, // Default 60 segundos
+    maxParticipants: settings.maxParticipants
+  });
 
   useEffect(() => {
     setLocalSettings(settings);
@@ -272,17 +278,17 @@ function HostView({
                 <div className="relative">
                   <input
                     type="number"
-                    min={1}
-                    max={5}
-                    value={localSettings.roundDurationInMinutes}
+                    min={30}
+                    max={300}
+                    value={localSettings.roundDurationInSeconds}
                     onChange={(e) => {
                       const value = parseInt(e.target.value);
                       setLocalSettings({
                         ...localSettings,
-                        roundDurationInMinutes: value > 0 ? value : ''
+                        roundDurationInSeconds: value > 0 ? value : ''
                       });
                     }}
-                    className="w-full p-3 pl-4 pr-12 rounded-xl border border-gray-200 
+                    className="w-full p-3 pl-4 pr-16 rounded-xl border border-gray-200 
                              dark:border-gray-600 dark:bg-gray-800 
                              focus:ring-2 focus:ring-blue-500 focus:border-transparent
                              transition-all duration-200 ease-in-out
@@ -291,9 +297,12 @@ function HostView({
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 
                                  text-sm text-gray-500 dark:text-gray-400">
-                    min
+                    seg
                   </span>
                 </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                  Entre 30 e 300 segundos
+                </span>
               </div>
 
               <div className="relative">
