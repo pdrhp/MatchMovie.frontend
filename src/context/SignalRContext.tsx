@@ -6,16 +6,30 @@ import { createContext, ReactNode, useContext, useEffect, useRef, useState } fro
 import { toast } from 'sonner';
 
 
+interface MovieVoteResult {
+  movie: Movie;
+  voteCount: number;
+}
+
+interface RoomFinishedResponse {
+  participantVotes: Record<string, number[]>;
+  movieResults: MovieVoteResult[];
+  totalParticipants: number;
+}
+
 interface SignalRContextType {
   connection: signalR.HubConnection | null;
   isConnected: boolean;
   room: Room | null;
   error: string | null;
-  createRoom: () => Promise<void>;
-  joinRoom: (roomCode: string) => Promise<void>;
+  createRoom: (userName: string) => Promise<void>;
+  joinRoom: (roomCode: string, userName: string) => Promise<void>;
   startMatching: (roomCode: string) => Promise<void>;
   configureRoom: (roomCode: string, settings: RoomSettings) => Promise<void>;
   addMoviesToRoom: (roomCode: string, movies: Movie[]) => Promise<void>;
+  setLoadingMovies: () => Promise<void>;
+  voteMovie: (roomCode: string, movieId: number) => Promise<void>;
+  finishRoom: (roomCode: string) => Promise<void>;
 }
 
 const SignalRContext = createContext<SignalRContextType>({
@@ -27,7 +41,10 @@ const SignalRContext = createContext<SignalRContextType>({
   joinRoom: async () => {},
   startMatching: async () => {},
   configureRoom: async () => {},
-  addMoviesToRoom: async () => {}
+  addMoviesToRoom: async () => {},
+  setLoadingMovies: async () => {},
+  voteMovie: async () => {},
+  finishRoom: async () => {}
 });
 
 export function SignalRProvider({ children }: { children: ReactNode }) {
@@ -36,10 +53,8 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const [room, setRoom] = useState<Room | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  // Referência para o room atual
   const roomRef = useRef<Room | null>(null);
 
-  // Atualiza a ref sempre que room mudar
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
@@ -94,13 +109,17 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
         hostConnectionId: response.isHost ? conn.connectionId! : '',
         settings: {
           categories: [],
-          roundDurationInMinutes: 3,
+          roundDurationInSeconds: 30,
           maxParticipants: 10
         },
         participantsConnectionIds: [],
         status: RoomStatus.WaitingToStart,
         movies: [],
-        participantVotes: {}
+        participantVotes: {},
+        participantNames: {
+          [conn.connectionId!]: response.userName
+        },
+        finalizedData: null
       };
       setRoom(newRoom);
       roomRef.current = newRoom;
@@ -155,20 +174,36 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       setError(null);
     });
 
-    conn.on("RoomConfigured", (settings: RoomSettings) => {
+    conn.on("RoomConfigured", (settings: {
+      categories: string[];
+      roundDurationInSeconds: number;
+      maxParticipants: number;
+    }) => {
       if (roomRef.current) {
-        console.log(roomRef.current);
         setRoom(prev => ({
           ...prev!,
           settings
         }));
         toast.success('Configurações da sala atualizadas com sucesso!', {
           description: `${settings.categories.length} categorias selecionadas, 
-                       ${settings.roundDurationInMinutes} minutos por rodada, 
+                       ${settings.roundDurationInSeconds} segundos por rodada, 
                        máximo de ${settings.maxParticipants} participantes.`
         });
       }
       setError(null);
+    });
+
+    conn.on("MovieVoted", (response: {
+      participantId: string;
+      movieId: number;
+      participantsVotes: Record<string, number[]>;
+    }) => {
+      if (roomRef.current) {
+        setRoom(prev => ({
+          ...prev!,
+          participantVotes: response.participantsVotes
+        }));
+      }
     });
 
     conn.on("Error", (message: string) => {
@@ -189,6 +224,27 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
         });
       }
     });
+
+    conn.on("RoomFinished", (response: RoomFinishedResponse) => {
+      if (roomRef.current) {
+        setRoom(prev => ({
+          ...prev!,
+          status: RoomStatus.Finished,
+          participantVotes: response.participantVotes,
+          finalizedData: {
+            totalParticipants: response.totalParticipants,
+            movieResults: response.movieResults.map(result => ({
+              movieId: result.movie.id,
+              votes: result.voteCount
+            }))
+          }
+        }));
+
+        toast.success('Sala encerrada!', {
+          description: `${response.totalParticipants} participantes votaram em ${response.movieResults.length} filmes`
+        });
+      }
+    });
   };
 
   const startConnection = async (conn: signalR.HubConnection) => {
@@ -203,10 +259,10 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const createRoom = async () => {
+  const createRoom = async (userName: string) => {
     try {
       if (connection && isConnected) {
-        await connection.invoke("CreateRoom");
+        await connection.invoke("CreateRoom", userName);
         setError(null);
       }
     } catch (err) {
@@ -215,10 +271,10 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const joinRoom = async (roomCode: string) => {
+  const joinRoom = async (roomCode: string, userName: string) => {
     try {
       if (connection && isConnected) {
-        await connection.invoke("JoinRoom", roomCode);
+        await connection.invoke("JoinRoom", roomCode, userName);
         setError(null);
       }
     } catch (err) {
@@ -242,8 +298,8 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const configureRoom = async (roomCode: string, settings: RoomSettings) => {
     try {
       if (connection && isConnected) {
-        if (Number(settings.roundDurationInMinutes) < 1 || Number(settings.roundDurationInMinutes) > 5) {
-          const errorMsg = 'Duração da rodada deve ser entre 1 e 5 minutos';
+        if (Number(settings.roundDurationInSeconds) < 30 || Number(settings.roundDurationInSeconds) > 300) {
+          const errorMsg = 'Duração da rodada deve ser entre 30 e 300 segundos';
           setError(errorMsg);
           toast.error('Erro!', { description: errorMsg });
           return;
@@ -280,6 +336,64 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setLoadingMovies = async () => {
+    if (!room) return;
+    
+    setRoom(prev => prev ? {
+      ...prev,
+      status: RoomStatus.LoadingMovies
+    } : null);
+  };
+
+  const voteMovie = async (roomCode: string, movieId: number) => {
+    try {
+      if (connection && isConnected) {
+        await connection.invoke("VoteMovie", roomCode, movieId);
+        setError(null);
+      }
+    } catch (err) {
+      const errorMsg = 'Erro ao votar no filme';
+      setError(errorMsg);
+      toast.error('Erro!', { description: errorMsg });
+      console.error('Erro ao votar:', err);
+    }
+  };
+
+  const finishRoom = async (roomCode: string) => {
+    try {
+      if (connection && isConnected) {
+        await connection.invoke("FinishRoom", roomCode);
+        setError(null);
+      }
+    } catch (err) {
+      const errorMsg = 'Erro ao encerrar a sala';
+      setError(errorMsg);
+      toast.error('Erro!', { description: errorMsg });
+      console.error('Erro ao encerrar sala:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!connection) return;
+
+    connection.on("MovieVoted", (response: {
+      participantId: string;
+      movieId: number;
+      participantsVotes: Record<string, number[]>;
+    }) => {
+      if (roomRef.current) {
+        setRoom(prev => ({
+          ...prev!,
+          participantVotes: response.participantsVotes
+        }));
+      }
+    });
+
+    return () => {
+      connection.off("MovieVoted");
+    };
+  }, [connection]);
+
   return (
     <SignalRContext.Provider value={{
       connection,
@@ -290,7 +404,10 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       joinRoom,
       startMatching,
       configureRoom,
-      addMoviesToRoom
+      addMoviesToRoom,
+      setLoadingMovies,
+      voteMovie,
+      finishRoom
     }}>
       {children}
     </SignalRContext.Provider>

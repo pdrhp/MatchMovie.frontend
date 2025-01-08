@@ -9,7 +9,7 @@ export enum RoomStatus {
   
   export interface RoomSettings {
     categories: string[];
-    roundDurationInMinutes: number | '';
+    roundDurationInSeconds: number | '';
     maxParticipants: number | '';
   }
   
@@ -21,20 +21,33 @@ export enum RoomStatus {
     status: RoomStatus;
     movies: Movie[];
     participantVotes: Record<string, number[]>;
+    participantNames: Record<string, string>;
+    finalizedData: RoomFinalizedData | null;
+  }
+
+  export interface RoomFinalizedData {
+    totalParticipants: number;
+    movieResults: {
+      movieId: number;
+      votes: number;
+    }[];
   }
   
   export interface RoomCreatedResponse {
     code: string;
     isHost: boolean;
+    userName: string;
   }
-  
-  export interface ParticipantUpdateResponse {
-    participantCount: number;
-    isHost: boolean;
-  }
-  
+    
   export interface RoomConfiguredResponse {
     categories: string[];
     roundDurationInMinutes: number;
     maxParticipants: number;
+  }
+
+    export interface ParticipantUpdateResponse {
+    participantCount: number;
+    isHost: boolean;
+    userName: string;
+    participantNames: Record<string, string>;
   }
