@@ -9,17 +9,20 @@ export default function Home() {
   const router = useRouter();
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [roomCode, setRoomCode] = useState('');
+  const [userName, setUserName] = useState('');
 
-  // Redireciona quando uma sala é criada ou quando entra em uma sala
   useEffect(() => {
-    console.log(room);
     if (room?.code) {
       router.push(`/room/${room.code}`);
     }
   }, [room, room?.code, router]);
 
   const handleCreateRoom = async () => {
-    await createRoom();
+    if (!userName.trim()) {
+      toast.error('Erro!', { description: 'Digite seu nome' });
+      return;
+    }
+    await createRoom(userName.trim());
   };
 
   const handleJoinRoom = async (e: React.FormEvent) => {
@@ -28,7 +31,11 @@ export default function Home() {
       toast.error('Erro!', { description: 'Digite o código da sala' });
       return;
     }
-    await joinRoom(roomCode.toUpperCase());
+    if (!userName.trim()) {
+      toast.error('Erro!', { description: 'Digite seu nome' });
+      return;
+    }
+    await joinRoom(roomCode.toUpperCase(), userName.trim());
     setIsJoinModalOpen(false);
   };
 
@@ -44,6 +51,30 @@ export default function Home() {
             {error}
           </div>
         )}
+
+        {/* Input de Nome */}
+        <div className="w-full max-w-[400px]">
+          <label 
+            htmlFor="userName" 
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Seu nome
+          </label>
+          <input
+            id="userName"
+            type="text"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="Digite seu nome"
+            className="w-full p-3 rounded-xl border border-gray-200 
+                     dark:border-gray-600 dark:bg-gray-700
+                     focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                     transition-all duration-200 ease-in-out
+                     text-gray-900 dark:text-white
+                     placeholder-gray-400 dark:placeholder-gray-500"
+            maxLength={30}
+          />
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
           <button
