@@ -1,54 +1,69 @@
 # Imagem base
 FROM node:20-alpine AS base
 
-# Dependências para o sharp (processamento de imagens)
+# Dependências necessárias
 RUN apk add --no-cache libc6-compat
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Fase de instalação de dependências
+# Fase de dependências
 FROM base AS deps
 WORKDIR /app
 
-# Copia os arquivos de configuração
-COPY package.json package-lock.json* ./
+# Copia arquivos de dependência
+COPY package.json pnpm-lock.yaml ./
 
-# Instala as dependências
-RUN npm ci
+# Instala dependências com cache limpo
+RUN pnpm install --frozen-lockfile
 
-# Fase de build
+# Fase de builder
 FROM base AS builder
 WORKDIR /app
 
-# Copia as dependências da fase anterior
+# Copia dependências e arquivos do projeto
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Variáveis de ambiente para o build
+# Variáveis de ambiente para build
 ARG TMDB_TOKEN
 ENV TMDB_TOKEN=$TMDB_TOKEN
 
-# Build da aplicação
-RUN npm run build
+# Configuração do Next.js
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
 
-# Fase de produção
+# Build da aplicação
+RUN pnpm build
+
+# Fase de runner
 FROM base AS runner
 WORKDIR /app
 
-# Define o usuário não-root
+# Variáveis de ambiente para produção
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Cria usuário não-root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# Define permissões para o diretório
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Define usuário não-root
 USER nextjs
 
-# Copia os arquivos necessários
-COPY --from=builder /app/public ./public
+# Copia arquivos necessários
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Variáveis de ambiente para produção
-ENV NODE_ENV=production
-ENV PORT=3000
-
-# Expõe a porta
+# Expõe porta
 EXPOSE 3000
 
-# Comando para iniciar a aplicação
+# Define variáveis de ambiente em runtime
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Comando para iniciar
 CMD ["node", "server.js"]
