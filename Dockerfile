@@ -23,8 +23,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Variáveis de ambiente para build
+ARG NEXT_PUBLIC_WS_URL
+ARG TMDB_API_KEY
 ARG TMDB_TOKEN
+
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV TMDB_API_KEY=$TMDB_API_KEY
 ENV TMDB_TOKEN=$TMDB_TOKEN
 
 # Configuração do Next.js
