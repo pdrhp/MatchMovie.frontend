@@ -1,5 +1,6 @@
 'use client';
 import { useSignalR } from "@/context/SignalRContext";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -42,9 +43,52 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <main className="flex flex-col items-center gap-8">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-          MatchMovie
-        </h1>
+
+
+        
+        <motion.h1 
+          className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500 
+                     bg-clip-text text-transparent drop-shadow-sm"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 0.5,
+            ease: "easeOut"
+          }}
+        >
+          <motion.span
+            initial={{ display: "inline-block" }}
+            whileHover={{ 
+              scale: 1.05,
+              rotate: [-1, 1, -1],
+              transition: {
+                rotate: {
+                  repeat: Infinity,
+                  duration: 0.5
+                }
+              }
+            }}
+            className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500"
+          >
+            Match
+          </motion.span>
+          <motion.span
+            initial={{ display: "inline-block" }}
+            whileHover={{ 
+              scale: 1.05,
+              rotate: [1, -1, 1],
+              transition: {
+                rotate: {
+                  repeat: Infinity,
+                  duration: 0.5
+                }
+              }
+            }}
+            className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500"
+          >
+            Movie
+          </motion.span>
+        </motion.h1>
         
         {error && (
           <div className="p-4 text-red-500 bg-red-100 dark:bg-red-900/30 rounded-lg">

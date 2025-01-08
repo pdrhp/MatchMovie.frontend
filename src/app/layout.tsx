@@ -38,7 +38,10 @@ export default function RootLayout({
           storageKey="matchmovie-theme"
         >
           <SignalRProvider>{children}</SignalRProvider>
-          <Toaster />
+          <Toaster 
+            closeButton
+            
+          />
         </ThemeProvider>
       </body>
     </html>

@@ -298,7 +298,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
   const configureRoom = async (roomCode: string, settings: RoomSettings) => {
     try {
       if (connection && isConnected) {
-        if (Number(settings.roundDurationInSeconds) < 30 || Number(settings.roundDurationInSeconds) > 300) {
+        if (Number(settings.roundDurationInSeconds) < 15 || Number(settings.roundDurationInSeconds) > 300) {
           const errorMsg = 'Duração da rodada deve ser entre 30 e 300 segundos';
           setError(errorMsg);
           toast.error('Erro!', { description: errorMsg });

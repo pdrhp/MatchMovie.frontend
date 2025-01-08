@@ -224,6 +224,19 @@ function HostView({
     await onSaveSettings(roomCode, localSettings);
   };
 
+  const handleStartMatch = async () => {
+    // Verifica se há categorias selecionadas
+    if (!localSettings.categories.length) {
+      toast.error('Selecione categorias', {
+        description: 'Você precisa selecionar pelo menos uma categoria para iniciar o match.'
+      });
+      return;
+    }
+
+    // Continua com o início do match
+    onStartMatch();
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-8">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-h-[90vh] flex flex-col">
@@ -394,17 +407,17 @@ function HostView({
             </div>
 
             <div className="max-h-[40vh] overflow-y-auto pr-2">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {filteredCategories.map((category) => (
                   <label
                     key={category}
-                    className={`group relative flex items-center p-4 rounded-xl cursor-pointer
-                             transition-all duration-200 ease-in-out
-                             ${
-                               localSettings.categories.includes(category)
-                                 ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500 shadow-md'
-                                 : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-700'
-                             }`}
+                    className={`group relative flex items-center p-3 rounded-lg cursor-pointer
+                               transition-all duration-200 ease-in-out text-sm
+                               ${
+                                 localSettings.categories.includes(category)
+                                   ? 'bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-500 shadow-md'
+                                   : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-700'
+                               }`}
                   >
                     <input
                       type="checkbox"
@@ -417,7 +430,7 @@ function HostView({
                       }}
                       className="hidden"
                     />
-                    <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center
+                    <div className={`w-4 h-4 rounded border-2 mr-2 flex items-center justify-center
                                   transition-all duration-200 ease-in-out
                                   ${
                                     localSettings.categories.includes(category)
@@ -426,7 +439,7 @@ function HostView({
                                   }`}
                     >
                       {localSettings.categories.includes(category) && (
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
@@ -460,10 +473,15 @@ function HostView({
             Salvar Configurações
           </button>
           <button
-            onClick={onStartMatch}
-            className="flex-1 px-6 py-4 bg-green-500 text-white rounded-xl
-                     hover:bg-green-600 transition-colors font-medium
-                     flex items-center justify-center gap-2"
+            onClick={handleStartMatch}
+            disabled={localSettings.categories.length === 0}
+            className={`flex-1 px-6 py-4 rounded-xl
+                       flex items-center justify-center gap-2
+                       font-medium transition-colors
+                       ${localSettings.categories.length === 0 
+                         ? 'bg-gray-400 cursor-not-allowed' 
+                         : 'bg-green-500 hover:bg-green-600'} 
+                       text-white`}
           >
             <PlayCircle size={20} />
             Iniciar Match
