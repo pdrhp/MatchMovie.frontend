@@ -46,17 +46,17 @@ export async function GET(request: Request) {
     ];
     const randomSort = sortOptions[Math.floor(Math.random() * sortOptions.length)];
 
-    // Busca filmes com critérios variados
+    // Busca filmes com critérios mais rigorosos
     const response = await fetch(
       `https://api.themoviedb.org/3/discover/movie?` + 
       `with_genres=${genreId}&` +
       `sort_by=${randomSort}&` +
-      `vote_count.gte=50&` + // Reduzido para ter mais variedade
-      `vote_average.gte=6.0&` + // Reduzido para ter mais variedade
+      `vote_count.gte=1000&` + 
+      `vote_average.gte=7.0&` + 
       `primary_release_date.gte=2000-01-01&` +
       `primary_release_date.lte=2025-12-31&` +
       `with_original_language=en|pt|es|fr&` +
-      `page=${randomPage}&` + // Página aleatória
+      `page=${randomPage}&` + 
       `language=pt-BR`,
       {
         headers: {

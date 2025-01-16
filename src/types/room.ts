@@ -1,10 +1,12 @@
 import { Movie } from "./movie";
+import { MovieAnalysis } from "./movie-analysis";
 
 export enum RoomStatus {
     WaitingToStart = 0,
     LoadingMovies = 1,
     InProgress = 2,
-    Finished = 3
+    LoadingFinalizedData = 3,
+    Finished = 4
   }
   
   export interface RoomSettings {
@@ -20,10 +22,13 @@ export enum RoomStatus {
     participantsConnectionIds: string[];
     status: RoomStatus;
     movies: Movie[];
+    analyzedRoom: MovieAnalysis | null;
     participantVotes: Record<string, number[]>;
     participantNames: Record<string, string>;
     finalizedData: RoomFinalizedData | null;
   }
+
+
 
   export interface RoomFinalizedData {
     totalParticipants: number;

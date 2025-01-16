@@ -1,5 +1,6 @@
 'use client';
 import { Movie } from '@/types/movie';
+import { MovieAnalysis } from '@/types/movie-analysis';
 import { ParticipantUpdateResponse, Room, RoomCreatedResponse, RoomSettings, RoomStatus } from '@/types/room';
 import * as signalR from '@microsoft/signalr';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
@@ -15,6 +16,7 @@ interface RoomFinishedResponse {
   participantVotes: Record<string, number[]>;
   movieResults: MovieVoteResult[];
   totalParticipants: number;
+  analyzedRoom: MovieAnalysis;
 }
 
 interface SignalRContextType {
@@ -115,6 +117,7 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
         participantsConnectionIds: [],
         status: RoomStatus.WaitingToStart,
         movies: [],
+        analyzedRoom: null,
         participantVotes: {},
         participantNames: {
           [conn.connectionId!]: response.userName
@@ -225,12 +228,20 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    conn.on("RoomAnalyzing", () => {
+      setRoom(prev => prev ? {
+        ...prev,
+        status: RoomStatus.LoadingFinalizedData
+      } : null);
+    });
+
     conn.on("RoomFinished", (response: RoomFinishedResponse) => {
       if (roomRef.current) {
         setRoom(prev => ({
           ...prev!,
           status: RoomStatus.Finished,
           participantVotes: response.participantVotes,
+          analyzedRoom: response.analyzedRoom,
           finalizedData: {
             totalParticipants: response.totalParticipants,
             movieResults: response.movieResults.map(result => ({
