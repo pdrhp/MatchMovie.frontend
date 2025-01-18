@@ -1,15 +1,9 @@
 'use client';
 import { useSignalR } from "@/context/SignalRContext";
-import { Movie } from "@/types/movie";
 import { Crown, Heart, Sparkles, Trophy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-interface MovieResult {
-  movie: Movie;
-  voteCount: number;
-  matchedParticipants: string[]; // Nomes dos participantes que deram match
-}
 
 export default function ResultsPage() {
   const { room } = useSignalR();
@@ -27,7 +21,6 @@ export default function ResultsPage() {
 
   
 
-  // Processa os resultados dos filmes
   const movieResults = room.movies.map(movie => {
     const votedParticipants = Object.entries(room.participantVotes)
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
